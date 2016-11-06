@@ -1,0 +1,92 @@
+
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Resources" : {
+    "ImageBuildingVPC" : {
+      "Type" : "AWS::EC2::VPC",
+      "Properties" : {
+        "CidrBlock" : "10.196.0.0/16",
+        "EnableDnsSupport" : "true",
+        "EnableDnsHostnames" : "true",
+        "InstanceTenancy" : "default"
+      }
+    },
+    "ImageBuildingSubnet" : {
+      "Type" : "AWS::EC2::Subnet",
+      "Properties" : {
+        "VpcId" : { "Ref" : "ImageBuildingVPC" },
+        "CidrBlock" : "10.196.10.0/24",
+        "AvailabilityZone" : "eu-west-1a"
+      }
+    },
+    "InstanceSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Allow ssh to client host",
+        "VpcId" : {"Ref" : "ImageBuildingVPC"},
+        "SecurityGroupIngress" : [{
+          "IpProtocol" : "tcp",
+          "FromPort" : "22",
+          "ToPort" : "22",
+          "CidrIp" : "0.0.0.0/0"
+        }],
+        "SecurityGroupEgress" : [{
+          "IpProtocol" : "-1",
+          "CidrIp" : "0.0.0.0/0"
+        }]
+      }
+    },
+    "Instance" : {
+      "Type" : "AWS::EC2::Instance",
+      "Properties" : {
+        "ImageId" : "ami-844e0bf7",
+        "InstanceType" : "t2.micro",
+        "KeyName" : "aws_isiklik",
+        "NetworkInterfaces": [ {
+          "AssociatePublicIpAddress": "true",
+          "DeviceIndex": "0",
+          "GroupSet": [{"Ref" : "InstanceSecurityGroup"}],
+          "SubnetId": {"Ref": "ImageBuildingSubnet"}
+        } ],
+        "Tags": [{
+          "Key": "Name",
+          "Value": "image-building-machine"
+        }]
+      }
+    },
+    "TheRouteTable" : {
+      "Type" : "AWS::EC2::RouteTable",
+      "DependsOn" : "ImageBuildingVPC",
+      "Properties" : {
+        "VpcId" : { "Ref" : "ImageBuildingVPC" }
+      }
+    },
+    "TheSubnetRouteTableAssociation" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+        "SubnetId" : { "Ref" : "ImageBuildingSubnet" },
+        "RouteTableId" : { "Ref" : "TheRouteTable" }
+      }
+    },
+    "TheInternetGateway" : {
+      "Type" : "AWS::EC2::InternetGateway",
+      "Properties" : {}
+    },
+    "InternetRoute" : {
+      "Type" : "AWS::EC2::Route",
+      "DependsOn" : ["TheInternetGateway", "TheRouteTable", "GatewayAttachment"],
+      "Properties" : {
+        "RouteTableId" : { "Ref" : "TheRouteTable" },
+        "DestinationCidrBlock" : "0.0.0.0/0",
+        "GatewayId" : { "Ref" : "TheInternetGateway" }
+      }
+    },
+    "GatewayAttachment" : {
+      "Type" : "AWS::EC2::VPCGatewayAttachment",
+      "Properties" : {
+        "InternetGatewayId" : { "Ref" : "TheInternetGateway" },
+        "VpcId" : {"Ref" : "ImageBuildingVPC"}
+      }
+    }
+  }
+}
