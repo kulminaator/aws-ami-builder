@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 /**
- * Created by martin on 6.10.16.
+ * Applies a cf stack to aws and monitors it's status until it doesn't pend anymore.
  */
 public class CloudFormationApplier {
 
